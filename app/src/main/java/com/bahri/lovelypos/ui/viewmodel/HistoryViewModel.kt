@@ -22,11 +22,9 @@ class HistoryViewModel(
     val selectedDate: StateFlow<Long?> = _selectedDate.asStateFlow()
 
     init {
+        // Bug 1 Fix: Set default to local today's start
         val cal = Calendar.getInstance()
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
         _selectedDate.value = cal.timeInMillis
     }
 
@@ -34,16 +32,24 @@ class HistoryViewModel(
     val historyState: StateFlow<UiState<List<Transaction>>> = _historyState.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val transactions: StateFlow<List<Transaction>> = _selectedDate.flatMapLatest { date ->
+    val transactions: StateFlow<List<Transaction>> = _selectedDate.flatMapLatest { dateMs ->
         _historyState.value = UiState.Loading
-        if (date == null) {
+        if (dateMs == null) {
             getTransactionHistoryUseCase()
         } else {
-            val startMs = date
-            val cal = Calendar.getInstance()
-            cal.timeInMillis = date
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-            val endMs = cal.timeInMillis - 1
+            // Bug 1 Fix: DatePicker returns UTC millis. 
+            // We need to treat it as "Local Date" midnight.
+            val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            utcCal.timeInMillis = dateMs
+            
+            val localCal = Calendar.getInstance()
+            localCal.set(utcCal.get(Calendar.YEAR), utcCal.get(Calendar.MONTH), utcCal.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
+            localCal.set(Calendar.MILLISECOND, 0)
+            
+            val startMs = localCal.timeInMillis
+            localCal.add(Calendar.DAY_OF_YEAR, 1)
+            val endMs = localCal.timeInMillis - 1
+
             getTransactionHistoryUseCase(startMs, endMs)
         }
     }

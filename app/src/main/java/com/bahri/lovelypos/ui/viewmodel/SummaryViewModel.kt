@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.bahri.lovelypos.domain.model.SummaryReport
 import com.bahri.lovelypos.domain.usecase.GetSalesSummaryUseCase
 import com.bahri.lovelypos.util.UiState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
@@ -13,9 +14,6 @@ import java.util.*
 class SummaryViewModel(
     private val getSalesSummaryUseCase: GetSalesSummaryUseCase
 ) : ViewModel() {
-
-    private val _summaryState = MutableStateFlow<UiState<SummaryReport?>>(UiState.Loading)
-    val summaryState: StateFlow<UiState<SummaryReport?>> = _summaryState.asStateFlow()
 
     private val _dateRangeMode = MutableStateFlow("Hari ini")
     val dateRangeMode: StateFlow<String> = _dateRangeMode.asStateFlow()
@@ -26,45 +24,41 @@ class SummaryViewModel(
     private val _customEndDate = MutableStateFlow<Long?>(null)
     val customEndDate: StateFlow<Long?> = _customEndDate.asStateFlow()
 
-    init {
-        loadSummary("Hari ini")
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val summaryState: StateFlow<UiState<SummaryReport?>> = combine(
+        _dateRangeMode, _customStartDate, _customEndDate
+    ) { mode, customStart, customEnd ->
+        Triple(mode, customStart, customEnd)
+    }.flatMapLatest { (mode, start, end) ->
+        val range = when (mode) {
+            "Hari ini" -> getTodayRange()
+            "Minggu ini" -> getThisWeekRange()
+            "Bulan ini" -> getThisMonthRange()
+            "Custom" -> {
+                if (start != null && end != null) Pair(start, end) else null
+            }
+            else -> getTodayRange()
+        }
+
+        if (range == null) {
+            flowOf(UiState.Success(null))
+        } else {
+            getSalesSummaryUseCase(range.first, range.second)
+                .map { UiState.Success(it) as UiState<SummaryReport?> }
+                .onStart { emit(UiState.Loading) }
+                .catch { emit(UiState.Error(it.message ?: "Unknown error")) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
     fun setDateRangeMode(mode: String) {
         _dateRangeMode.value = mode
-        if (mode != "Custom") {
-            loadSummary(mode)
-        }
     }
 
     fun setCustomDateRange(start: Long?, end: Long?) {
         _customStartDate.value = start
         _customEndDate.value = end
         if (start != null && end != null) {
-            loadSummary("Custom")
-        }
-    }
-
-    private fun loadSummary(mode: String) {
-        viewModelScope.launch {
-            _summaryState.value = UiState.Loading
-            try {
-                val (start, end) = when (mode) {
-                    "Hari ini" -> getTodayRange()
-                    "Minggu ini" -> getThisWeekRange()
-                    "Bulan ini" -> getThisMonthRange()
-                    "Custom" -> {
-                        val s = _customStartDate.value ?: return@launch
-                        val e = _customEndDate.value ?: return@launch
-                        Pair(s, e)
-                    }
-                    else -> getTodayRange()
-                }
-                val report = getSalesSummaryUseCase(start, end)
-                _summaryState.value = UiState.Success(report)
-            } catch (e: Exception) {
-                _summaryState.value = UiState.Error(e.message ?: "Unknown Error")
-            }
+            _dateRangeMode.value = "Custom"
         }
     }
 

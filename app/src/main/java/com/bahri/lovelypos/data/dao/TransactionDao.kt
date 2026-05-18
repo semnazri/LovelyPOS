@@ -1,3 +1,4 @@
+// MODIFIED — Milestone 6
 package com.bahri.lovelypos.data.dao
 
 import androidx.room.*
@@ -25,10 +26,10 @@ interface TransactionDao {
     suspend fun getTransactionWithItems(transactionId: Long): TransactionWithItems?
 
     @Query("SELECT SUM(totalAmount) FROM `transaction` WHERE createdAt >= :start AND createdAt <= :end")
-    suspend fun getRevenueByDateRange(start: Long, end: Long): Long?
+    fun getRevenueByDateRange(start: Long, end: Long): Flow<Long?>
 
     @Query("SELECT COUNT(*) FROM `transaction` WHERE createdAt >= :start AND createdAt <= :end")
-    suspend fun getTransactionCountByDateRange(start: Long, end: Long): Int
+    fun getTransactionCountByDateRange(start: Long, end: Long): Flow<Int>
 
     @Query("""
         SELECT menuItemName, SUM(quantity) as totalQty, SUM(subtotal) as totalRevenue 
@@ -38,7 +39,7 @@ interface TransactionDao {
         GROUP BY menuItemName 
         ORDER BY totalQty DESC
     """)
-    suspend fun getTopSellingItems(start: Long, end: Long): List<ItemSalesSummary>
+    fun getTopSellingItems(start: Long, end: Long): Flow<List<ItemSalesSummary>>
 
     @Query("""
         SELECT paymentMethod, COUNT(*) as count, SUM(totalAmount) as total 
@@ -46,7 +47,7 @@ interface TransactionDao {
         WHERE createdAt >= :start AND createdAt <= :end 
         GROUP BY paymentMethod
     """)
-    suspend fun getRevenueByPaymentMethod(start: Long, end: Long): List<PaymentMethodSummary>
+    fun getRevenueByPaymentMethod(start: Long, end: Long): Flow<List<PaymentMethodSummary>>
 
     @Query("""
         SELECT strftime('%Y-%m-%d', datetime(createdAt / 1000, 'unixepoch', 'localtime')) as dateLabel, 
@@ -57,5 +58,5 @@ interface TransactionDao {
         GROUP BY dateLabel 
         ORDER BY dateLabel ASC
     """)
-    suspend fun getDailyRevenue(start: Long, end: Long): List<DailyRevenue>
+    fun getDailyRevenue(start: Long, end: Long): Flow<List<DailyRevenue>>
 }

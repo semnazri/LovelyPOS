@@ -1,3 +1,4 @@
+// MODIFIED — Milestone 6
 package com.bahri.lovelypos.domain.repository
 
 import androidx.room.withTransaction
@@ -8,6 +9,8 @@ import com.bahri.lovelypos.data.entity.TransactionWithItems
 import com.bahri.lovelypos.domain.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class TransactionRepositoryImpl(
@@ -71,19 +74,21 @@ class TransactionRepositoryImpl(
         transactionDao.getTransactionWithItems(transactionId)
     }
 
-    override suspend fun getSalesSummary(startMs: Long, endMs: Long): SummaryReport = withContext(Dispatchers.IO) {
-        val totalRevenue = transactionDao.getRevenueByDateRange(startMs, endMs) ?: 0L
-        val transactionCount = transactionDao.getTransactionCountByDateRange(startMs, endMs)
-        val topItems = transactionDao.getTopSellingItems(startMs, endMs)
-        val paymentBreakdown = transactionDao.getRevenueByPaymentMethod(startMs, endMs)
-        val dailyRevenue = transactionDao.getDailyRevenue(startMs, endMs)
-
-        SummaryReport(
-            totalRevenue = totalRevenue,
-            transactionCount = transactionCount,
-            topItems = topItems,
-            paymentBreakdown = paymentBreakdown,
-            dailyRevenue = dailyRevenue
-        )
+    override fun getSalesSummary(startMs: Long, endMs: Long): Flow<SummaryReport> {
+        return combine(
+            transactionDao.getRevenueByDateRange(startMs, endMs),
+            transactionDao.getTransactionCountByDateRange(startMs, endMs),
+            transactionDao.getTopSellingItems(startMs, endMs),
+            transactionDao.getRevenueByPaymentMethod(startMs, endMs),
+            transactionDao.getDailyRevenue(startMs, endMs)
+        ) { revenue, count, topItems, payments, daily ->
+            SummaryReport(
+                totalRevenue = revenue ?: 0L,
+                transactionCount = count,
+                topItems = topItems,
+                paymentBreakdown = payments,
+                dailyRevenue = daily
+            )
+        }
     }
 }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -223,7 +223,7 @@ fun DetailRow(label: String, value: String, isBold: Boolean = false, valueColor:
 @Composable
 fun EmptyHistoryState() {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Default.Refresh, null, Modifier.size(64.dp), tint = Color.Gray.copy(0.4f))
+        Icon(Icons.Default.Info, null, Modifier.size(64.dp), tint = Color.Gray.copy(0.4f))
         Spacer(Modifier.height(16.dp))
         Text("Tidak ada transaksi pada tanggal ini", color = Color.Gray)
     }

@@ -9,4 +9,8 @@ object CurrencyFormatter {
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         return format.format(amount)
     }
+    fun formatRupiahWithoutDecimal(amount: Long): String {
+        val formatted = formatRupiah(amount)
+        return formatted.removeSuffix(",00")
+    }
 }

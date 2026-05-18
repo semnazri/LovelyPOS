@@ -1,3 +1,4 @@
+// MODIFIED — Milestone 6
 package com.bahri.lovelypos.domain.repository
 
 import com.bahri.lovelypos.data.entity.Transaction
@@ -18,5 +19,5 @@ interface TransactionRepository {
     
     suspend fun getTransactionWithItems(transactionId: Long): TransactionWithItems?
 
-    suspend fun getSalesSummary(startMs: Long, endMs: Long): SummaryReport
+    fun getSalesSummary(startMs: Long, endMs: Long): Flow<SummaryReport>
 }

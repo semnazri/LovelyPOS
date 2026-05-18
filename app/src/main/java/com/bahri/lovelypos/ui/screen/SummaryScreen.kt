@@ -84,7 +84,7 @@ fun DateRangeSelector(selectedMode: String, onModeSelected: (String) -> Unit) {
 
 @Composable
 fun CustomDateRangeRow(start: Long?, end: Long?, onStartClick: () -> Unit, onEndClick: () -> Unit) {
-    Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.padding(16.dp).fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onStartClick, Modifier.weight(1f)) {
             Icon(Icons.Default.DateRange, null)
             Spacer(Modifier.width(8.dp))
@@ -118,10 +118,11 @@ fun SummaryContent(report: SummaryReport) {
             }
         }
         item {
-            Text("Menu Terlaris", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Menu Terjual", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 val maxQty = report.topItems.maxOfOrNull { it.totalQty } ?: 1
-                report.topItems.take(5).forEachIndexed { index, item -> TopItemRow(index + 1, item, maxQty) }
+                // Bug 3 Fix: Removed .take(5) to show all items
+                report.topItems.forEachIndexed { index, item -> TopItemRow(index + 1, item, maxQty) }
             }
         }
         item {
