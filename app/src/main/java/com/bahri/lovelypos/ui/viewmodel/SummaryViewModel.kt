@@ -7,9 +7,18 @@ import com.bahri.lovelypos.domain.model.SummaryReport
 import com.bahri.lovelypos.domain.usecase.GetSalesSummaryUseCase
 import com.bahri.lovelypos.util.UiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import java.util.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import java.util.Calendar
 
 class SummaryViewModel(
     private val getSalesSummaryUseCase: GetSalesSummaryUseCase
@@ -38,10 +47,14 @@ class SummaryViewModel(
                 if (start != null && end != null) {
                     val cal = Calendar.getInstance()
                     cal.timeInMillis = end
-                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+                    cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(
+                        Calendar.SECOND,
+                        59
+                    ); cal.set(Calendar.MILLISECOND, 999)
                     Pair(start, cal.timeInMillis)
                 } else null
             }
+
             else -> getTodayRange()
         }
 
@@ -69,9 +82,15 @@ class SummaryViewModel(
 
     private fun getTodayRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance()
-        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(
+            Calendar.SECOND,
+            0
+        ); cal.set(Calendar.MILLISECOND, 0)
         val start = cal.timeInMillis
-        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(
+            Calendar.SECOND,
+            59
+        ); cal.set(Calendar.MILLISECOND, 999)
         val end = cal.timeInMillis
         return Pair(start, end)
     }
@@ -79,10 +98,16 @@ class SummaryViewModel(
     private fun getThisWeekRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance()
         cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
-        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(
+            Calendar.SECOND,
+            0
+        ); cal.set(Calendar.MILLISECOND, 0)
         val start = cal.timeInMillis
         cal.add(Calendar.DAY_OF_WEEK, 6)
-        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(
+            Calendar.SECOND,
+            59
+        ); cal.set(Calendar.MILLISECOND, 999)
         val end = cal.timeInMillis
         return Pair(start, end)
     }
@@ -90,10 +115,16 @@ class SummaryViewModel(
     private fun getThisMonthRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance()
         cal.set(Calendar.DAY_OF_MONTH, 1)
-        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(
+            Calendar.SECOND,
+            0
+        ); cal.set(Calendar.MILLISECOND, 0)
         val start = cal.timeInMillis
         cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59); cal.set(Calendar.MILLISECOND, 999)
+        cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(
+            Calendar.SECOND,
+            59
+        ); cal.set(Calendar.MILLISECOND, 999)
         val end = cal.timeInMillis
         return Pair(start, end)
     }
