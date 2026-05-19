@@ -1,4 +1,3 @@
-// MODIFIED — Milestone 6
 package com.bahri.lovelypos.ui.screen
 
 import android.content.res.Configuration
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,9 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -50,7 +48,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import com.bahri.lovelypos.R
 import com.bahri.lovelypos.data.entity.MenuItem
 import com.bahri.lovelypos.domain.model.CartItem
@@ -90,6 +88,7 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showPaymentSheet by remember { mutableStateOf(false) }
+    var isGridView by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.paymentSuccess.collect {
@@ -105,9 +104,8 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { TopAppBar(title = { Text("Kasir", fontWeight = FontWeight.Bold) }) }
+    LovelyPOSTheme(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         AnimatedContent(
             targetState = isLandscape,
@@ -124,9 +122,10 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
                             categoryList,
                             selectedCategory,
                             cart,
+                            isGridView,
+                            { isGridView = !isGridView },
                             { viewModel.setCategory(it) },
-                            { viewModel.addToCart(it) },
-                            3
+                            { viewModel.addToCart(it) }
                         )
                     }
                     VerticalDivider()
@@ -149,9 +148,10 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
                             categoryList,
                             selectedCategory,
                             cart,
+                            isGridView,
+                            { isGridView = !isGridView },
                             { viewModel.setCategory(it) },
-                            { viewModel.addToCart(it) },
-                            2
+                            { viewModel.addToCart(it) }
                         )
                     }
                     HorizontalDivider()
@@ -181,21 +181,34 @@ fun MenuSection(
     categories: List<String>,
     selectedCategory: String,
     cart: List<CartItem>,
+    isGridView: Boolean,
+    onToggleView: () -> Unit,
     onCategorySelected: (String) -> Unit,
-    onItemClick: (MenuItem) -> Unit,
-    columns: Int
+    onItemClick: (MenuItem) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            items(categories) { cat ->
-                FilterChip(
-                    selected = cat == selectedCategory,
-                    onClick = { onCategorySelected(cat) },
-                    label = { Text(cat) },
-                    shape = RoundedCornerShape(20.dp)
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(categories) { cat ->
+                    FilterChip(
+                        selected = cat == selectedCategory,
+                        onClick = { onCategorySelected(cat) },
+                        label = { Text(cat) },
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                }
+            }
+            IconButton(onClick = onToggleView) {
+                Icon(
+                    if (isGridView) Icons.Default.List else Icons.Default.Menu,
+                    contentDescription = "Toggle View"
                 )
             }
         }
@@ -213,18 +226,33 @@ fun MenuSection(
                         contentAlignment = Alignment.Center
                     ) { Text("Belum ada menu", color = Color.Gray) }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columns),
-                        contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(filteredItems, key = { it.id }) { item ->
-                            val cartItem = cart.find { it.menuItem.id == item.id }
-                            POSMenuItemCard(
-                                item,
-                                cartItem?.quantity ?: 0,
-                                onClick = { onItemClick(item) })
+                    if (isGridView) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 140.dp),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filteredItems, key = { it.id }) { item ->
+                                val cartItem = cart.find { it.menuItem.id == item.id }
+                                POSMenuItemCard(
+                                    item,
+                                    cartItem?.quantity ?: 0,
+                                    onClick = { onItemClick(item) })
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredItems, key = { it.id }) { item ->
+                                val cartItem = cart.find { it.menuItem.id == item.id }
+                                POSMenuItemRow(
+                                    item,
+                                    cartItem?.quantity ?: 0,
+                                    onClick = { onItemClick(item) })
+                            }
                         }
                     }
                 }
@@ -290,6 +318,59 @@ fun POSMenuItemCard(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun POSMenuItemRow(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
+    val isEnabled = item.stock > 0 && item.isAvailable
+    Surface(
+        onClick = onClick,
+        enabled = isEnabled,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isEnabled) 1f else 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                if (!isEnabled) {
+                    Text(
+                        if (!item.isAvailable) "Nonaktif" else "Stok Habis",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            if (quantityInCart > 0) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            quantityInCart.toString(),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Text(
+                CurrencyFormatter.formatRupiah(item.price),
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 15.sp
+            )
         }
     }
 }
@@ -395,7 +476,7 @@ fun CartItemRow(item: CartItem, onInc: () -> Unit, onDec: () -> Unit) {
                 item.quantity.toString(),
                 fontWeight = FontWeight.Bold,
 
-            )
+                )
             IconButton(
                 onClick = onInc,
                 enabled = item.quantity < item.menuItem.stock,

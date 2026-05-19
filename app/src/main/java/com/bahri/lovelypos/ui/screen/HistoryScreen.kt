@@ -25,7 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import com.bahri.lovelypos.data.entity.Transaction
+import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import com.bahri.lovelypos.data.entity.TransactionWithItems
 import com.bahri.lovelypos.ui.viewmodel.HistoryViewModel
 import com.bahri.lovelypos.util.CurrencyFormatter
@@ -49,14 +51,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = koinViewModel()) {
 
     val dateLabel = if (selectedDateMs == null) "Semua Riwayat" else formatDateLabel(selectedDateMs!!)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Riwayat Transaksi", fontWeight = FontWeight.Bold) },
-                actions = { IconButton(onClick = { showDatePicker = true }) { Icon(Icons.Default.DateRange, "Pilih Tanggal") } }
-            )
-        }
-    ) { paddingValues ->
+    LovelyPOSTheme() { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             SummaryBar(dateLabel, transactions.size, totalRevenue) { viewModel.setDateFilter(null) }
 
@@ -97,7 +92,20 @@ fun HistoryScreen(viewModel: HistoryViewModel = koinViewModel()) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMs ?: System.currentTimeMillis())
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
-            confirmButton = { TextButton(onClick = { viewModel.setDateFilter(datePickerState.selectedDateMillis); showDatePicker = false }) { Text("Pilih") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { utcMs ->
+                        // Convert UTC midnight from DatePicker to Local midnight
+                        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMs }
+                        val localCal = Calendar.getInstance().apply {
+                            set(utcCal.get(Calendar.YEAR), utcCal.get(Calendar.MONTH), utcCal.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        viewModel.setDateFilter(localCal.timeInMillis)
+                    }
+                    showDatePicker = false
+                }) { Text("Pilih") }
+            },
             dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Batal") } }
         ) { DatePicker(state = datePickerState) }
     }

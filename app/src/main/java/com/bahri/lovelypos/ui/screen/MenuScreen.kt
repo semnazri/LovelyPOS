@@ -6,7 +6,19 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,6 +45,7 @@ import com.bahri.lovelypos.data.entity.MenuItem
 import com.bahri.lovelypos.ui.viewmodel.MenuViewModel
 import com.bahri.lovelypos.util.CurrencyFormatter
 import com.bahri.lovelypos.util.UiState
+import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,8 +65,7 @@ fun MenuScreen(
     val configuration = LocalConfiguration.current
     val columns = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Kelola Menu", fontWeight = FontWeight.Bold) }) },
+    LovelyPOSTheme(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { itemToEdit = null; showBottomSheet = true },

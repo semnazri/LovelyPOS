@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import com.bahri.lovelypos.domain.model.ItemSalesSummary
 import com.bahri.lovelypos.domain.model.SummaryReport
 import com.bahri.lovelypos.ui.viewmodel.SummaryViewModel
@@ -43,7 +44,7 @@ fun SummaryScreen(viewModel: SummaryViewModel = koinViewModel()) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Ringkasan Penjualan", fontWeight = FontWeight.Bold) }) }) { paddingValues ->
+    LovelyPOSTheme() { paddingValues ->
         Column(Modifier.fillMaxSize().padding(paddingValues)) {
             DateRangeSelector(mode) { viewModel.setDateRangeMode(it) }
             if (mode == "Custom") {
@@ -102,7 +103,22 @@ fun CustomDateRangeRow(start: Long?, end: Long?, onStartClick: () -> Unit, onEnd
 @Composable
 fun DatePickerDialogBase(onDismiss: () -> Unit, onDateSelected: (Long) -> Unit) {
     val state = rememberDatePickerState()
-    DatePickerDialog(onDismissRequest = onDismiss, confirmButton = { TextButton(onClick = { state.selectedDateMillis?.let { onDateSelected(it) } }) { Text("Pilih") } }) { DatePicker(state = state) }
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let { utcMs ->
+                    // Convert UTC midnight from DatePicker to Local midnight
+                    val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMs }
+                    val localCal = Calendar.getInstance().apply {
+                        set(utcCal.get(Calendar.YEAR), utcCal.get(Calendar.MONTH), utcCal.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    onDateSelected(localCal.timeInMillis)
+                }
+            }) { Text("Pilih") }
+        }
+    ) { DatePicker(state = state) }
 }
 
 @Composable
