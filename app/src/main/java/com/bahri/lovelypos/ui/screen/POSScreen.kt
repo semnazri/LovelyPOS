@@ -1,10 +1,8 @@
 package com.bahri.lovelypos.ui.screen
 
-import android.content.res.Configuration
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,12 +30,15 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,21 +46,23 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -75,6 +77,7 @@ import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 import com.bahri.lovelypos.ui.viewmodel.POSViewModel
 import com.bahri.lovelypos.util.CurrencyFormatter
 import com.bahri.lovelypos.util.UiState
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,13 +92,30 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
     val itemCount by viewModel.itemCount.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    var showPaymentSheet by remember { mutableStateOf(false) }
+    var isPaymentSheetVisible by remember { mutableStateOf(false) }
+    var isCartVisible by remember { mutableStateOf(false) }
     var isGridView by remember { mutableStateOf(false) }
+
+    val badgeScale = remember { Animatable(1f) }
+    LaunchedEffect(itemCount) {
+        if (itemCount > 0) {
+            badgeScale.animateTo(
+                targetValue = 1.2f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+            badgeScale.animateTo(1f)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.paymentSuccess.collect {
             if (it) {
-                showPaymentSheet = false; snackbarHostState.showSnackbar("Transaksi berhasil!")
+                isPaymentSheetVisible = false
+                isCartVisible = false
+                snackbarHostState.showSnackbar("Transaksi berhasil!")
             }
         }
     }
@@ -103,76 +123,85 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
         viewModel.errorMessage.collect { snackbarHostState.showSnackbar(it) }
     }
 
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    LovelyPOSTheme(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        AnimatedContent(
-            targetState = isLandscape,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "POSLayout",
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
-        ) { landscape ->
-            if (landscape) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(modifier = Modifier.weight(0.6f)) {
-                        MenuSection(
-                            menuState,
-                            filteredItems,
-                            categoryList,
-                            selectedCategory,
-                            cart,
-                            isGridView,
-                            { isGridView = !isGridView },
-                            { viewModel.setCategory(it) },
-                            { viewModel.addToCart(it) }
+    LovelyPOSTheme(useScaffold = false) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Kasir", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        IconButton(onClick = { isCartVisible = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (itemCount > 0) {
+                                        Badge(
+                                            containerColor = Color(0xFF008080),
+                                            contentColor = Color.White,
+                                            modifier = Modifier.graphicsLayer {
+                                                scaleX = badgeScale.value
+                                                scaleY = badgeScale.value
+                                            }
+                                        ) {
+                                            Text(itemCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                            }
+                        }
+                    }
+                )
+            },
+            floatingActionButton = {
+                if (cart.isNotEmpty()) {
+                    ExtendedFloatingActionButton(
+                        onClick = { isCartVisible = true },
+                        containerColor = Color(0xFF008080),
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Text(
+                            "🛒 $itemCount item · ${CurrencyFormatter.formatRupiah(totalAmount)}",
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    VerticalDivider()
-                    Box(modifier = Modifier.weight(0.4f)) {
-                        CartSection(
-                            cart,
-                            totalAmount,
-                            itemCount,
-                            { viewModel.increaseQty(it) },
-                            { viewModel.decreaseQty(it) },
-                            { showPaymentSheet = true })
-                    }
                 }
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(modifier = Modifier.weight(0.55f)) {
-                        MenuSection(
-                            menuState,
-                            filteredItems,
-                            categoryList,
-                            selectedCategory,
-                            cart,
-                            isGridView,
-                            { isGridView = !isGridView },
-                            { viewModel.setCategory(it) },
-                            { viewModel.addToCart(it) }
-                        )
-                    }
-                    HorizontalDivider()
-                    Box(modifier = Modifier.weight(0.45f)) {
-                        CartSection(
-                            cart,
-                            totalAmount,
-                            itemCount,
-                            { viewModel.increaseQty(it) },
-                            { viewModel.decreaseQty(it) },
-                            { showPaymentSheet = true })
-                    }
-                }
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                MenuSection(
+                    state = menuState,
+                    filteredItems = filteredItems,
+                    categories = categoryList,
+                    selectedCategory = selectedCategory,
+                    cart = cart,
+                    isGridView = isGridView,
+                    onToggleView = { isGridView = !isGridView },
+                    onCategorySelected = { viewModel.setCategory(it) },
+                    onItemClick = { viewModel.addToCart(it) }
+                )
             }
         }
     }
 
-    if (showPaymentSheet) {
-        PaymentBottomSheet(viewModel, onDismiss = { showPaymentSheet = false })
+    if (isCartVisible) {
+        CartBottomSheet(
+            cartItems = cart,
+            totalAmount = totalAmount,
+            onIncreaseQty = { viewModel.increaseQty(it) },
+            onDecreaseQty = { viewModel.decreaseQty(it) },
+            onRemoveItem = { viewModel.removeFromCart(it) },
+            onCheckout = {
+                isCartVisible = false
+                isPaymentSheetVisible = true
+            },
+            onDismiss = { isCartVisible = false }
+        )
+    }
+
+    if (isPaymentSheetVisible) {
+        PaymentBottomSheet(viewModel, onDismiss = { isPaymentSheetVisible = false })
     }
 }
 
@@ -271,9 +300,24 @@ fun MenuSection(
 @Composable
 fun POSMenuItemCard(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
     val isEnabled = item.stock > 0 && item.isAvailable
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
+
     Card(
-        modifier = Modifier.fillMaxWidth().height(120.dp)
-            .clickable(enabled = isEnabled) { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+            .clickable(enabled = isEnabled) {
+                scope.launch {
+                    scale.animateTo(0.95f, spring(stiffness = Spring.StiffnessHigh))
+                    scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                }
+                onClick()
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -327,12 +371,26 @@ fun POSMenuItemCard(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
 @Composable
 fun POSMenuItemRow(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
     val isEnabled = item.stock > 0 && item.isAvailable
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
+
     Surface(
-        onClick = onClick,
+        onClick = {
+            scope.launch {
+                scale.animateTo(0.95f, spring(stiffness = Spring.StiffnessHigh))
+                scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+            }
+            onClick()
+        },
         enabled = isEnabled,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isEnabled) 1f else 0.5f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(),
@@ -377,130 +435,6 @@ fun POSMenuItemRow(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun CartSection(
-    cart: List<CartItem>,
-    total: Long,
-    count: Int,
-    onInc: (Long) -> Unit,
-    onDec: (Long) -> Unit,
-    onPay: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            "Keranjang ($count)",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        if (cart.isEmpty()) {
-            Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Default.ShoppingCart,
-                    null,
-                    Modifier.size(64.dp),
-                    tint = Color.Gray.copy(0.4f)
-                )
-                Text("Keranjang Kosong", color = Color.Gray)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(cart, key = { it.menuItem.id }) { item ->
-                    CartItemRow(item, { onInc(item.menuItem.id) }, { onDec(item.menuItem.id) })
-                }
-            }
-        }
-        HorizontalDivider(Modifier.padding(vertical = 12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Total", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(
-                CurrencyFormatter.formatRupiah(total),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = onPay,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            enabled = cart.isNotEmpty(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Proses Bayar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun CartItemRow(item: CartItem, onInc: () -> Unit, onDec: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Column(Modifier.weight(1f).padding(end = 16.dp)) {
-            Text(item.menuItem.name, fontWeight = FontWeight.SemiBold)
-            Text(
-                CurrencyFormatter.formatRupiah(item.menuItem.price),
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.Gray
-            )
-        }
-        Row(
-            Modifier
-                .weight(1f)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(30.dp)
-        ) {
-            IconButton(
-                onClick = onDec,
-                modifier = Modifier.size(16.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-            ) {
-                if (item.quantity > 1) {
-                    Icon(
-                        painterResource(R.drawable.outline_remove_24),
-                        null,
-                        Modifier.size(16.dp),
-                        tint = Color.Red
-                    )
-                } else {
-                    Icon(Icons.Default.Delete, null, Modifier.size(16.dp), tint = Color.Red)
-                }
-            }
-            Text(
-                item.quantity.toString(),
-                fontWeight = FontWeight.Bold,
-
-                )
-            IconButton(
-                onClick = onInc,
-                enabled = item.quantity < item.menuItem.stock,
-                modifier = Modifier.size(16.dp)
-                    .background(
-                        if (item.quantity < item.menuItem.stock) MaterialTheme.colorScheme.primary else Color.Gray,
-                        CircleShape
-                    )
-            ) {
-                Icon(Icons.Default.Add, null, Modifier.size(32.dp), tint = Color.White)
-            }
-        }
-        Text(
-            CurrencyFormatter.formatRupiahWithoutDecimal(item.subtotal),
-            Modifier
-                .weight(1f)
-                .padding(start = 12.dp),
-            textAlign = TextAlign.End,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
