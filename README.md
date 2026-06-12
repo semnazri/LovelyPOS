@@ -2,7 +2,7 @@
 
 The reliable, offline-first Point of Sale companion for small businesses.
 
-![Version](https://img.shields.io/badge/version-v1.1.2-blue)
+![Version](https://img.shields.io/badge/version-v1.1.3-blue)
 ![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-7F52FF?logo=kotlin)
 ![Android](https://img.shields.io/badge/Android-API%2026+-3DDC84?logo=android)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-1.5.4-4285F4?logo=jetpackcompose)

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -91,7 +92,72 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
     val totalAmount by viewModel.totalAmount.collectAsStateWithLifecycle()
     val itemCount by viewModel.itemCount.collectAsStateWithLifecycle()
 
+    val paymentMethod by viewModel.paymentMethod.collectAsStateWithLifecycle()
+    val amountPaidInput by viewModel.amountPaidInput.collectAsStateWithLifecycle()
+    val changeAmount by viewModel.changeAmount.collectAsStateWithLifecycle()
+    val canConfirmPayment by viewModel.canConfirmPayment.collectAsStateWithLifecycle()
+
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.paymentSuccess.collect {
+            if (it) {
+                snackbarHostState.showSnackbar("Transaksi berhasil!")
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.errorMessage.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    POSScreenContent(
+        menuState = menuState,
+        filteredItems = filteredItems,
+        cart = cart,
+        categoryList = categoryList,
+        selectedCategory = selectedCategory,
+        totalAmount = totalAmount,
+        itemCount = itemCount,
+        paymentMethod = paymentMethod,
+        amountPaidInput = amountPaidInput,
+        changeAmount = changeAmount,
+        canConfirmPayment = canConfirmPayment,
+        snackbarHostState = snackbarHostState,
+        onCategorySelected = { viewModel.setCategory(it) },
+        onItemClick = { viewModel.addToCart(it) },
+        onIncreaseQty = { viewModel.increaseQty(it) },
+        onDecreaseQty = { viewModel.decreaseQty(it) },
+        onRemoveItem = { viewModel.removeFromCart(it) },
+        onSetPaymentMethod = { viewModel.setPaymentMethod(it) },
+        onSetAmountPaid = { viewModel.setAmountPaid(it) },
+        onProcessPayment = { viewModel.processPayment() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun POSScreenContent(
+    menuState: UiState<List<MenuItem>>,
+    filteredItems: List<MenuItem>,
+    cart: List<CartItem>,
+    categoryList: List<String>,
+    selectedCategory: String,
+    totalAmount: Long,
+    itemCount: Int,
+    paymentMethod: String,
+    amountPaidInput: String,
+    changeAmount: Long,
+    canConfirmPayment: Boolean,
+    snackbarHostState: SnackbarHostState,
+    onCategorySelected: (String) -> Unit,
+    onItemClick: (MenuItem) -> Unit,
+    onIncreaseQty: (Long) -> Unit,
+    onDecreaseQty: (Long) -> Unit,
+    onRemoveItem: (Long) -> Unit,
+    onSetPaymentMethod: (String) -> Unit,
+    onSetAmountPaid: (String) -> Unit,
+    onProcessPayment: () -> Unit
+) {
     var isPaymentSheetVisible by remember { mutableStateOf(false) }
     var isCartVisible by remember { mutableStateOf(false) }
     var isGridView by remember { mutableStateOf(false) }
@@ -110,24 +176,11 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.paymentSuccess.collect {
-            if (it) {
-                isPaymentSheetVisible = false
-                isCartVisible = false
-                snackbarHostState.showSnackbar("Transaksi berhasil!")
-            }
-        }
-    }
-    LaunchedEffect(Unit) {
-        viewModel.errorMessage.collect { snackbarHostState.showSnackbar(it) }
-    }
-
     LovelyPOSTheme(useScaffold = false) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Kasir", fontWeight = FontWeight.Bold) },
+                    title = {},
                     actions = {
                         IconButton(onClick = { isCartVisible = true }) {
                             BadgedBox(
@@ -178,8 +231,8 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
                     cart = cart,
                     isGridView = isGridView,
                     onToggleView = { isGridView = !isGridView },
-                    onCategorySelected = { viewModel.setCategory(it) },
-                    onItemClick = { viewModel.addToCart(it) }
+                    onCategorySelected = onCategorySelected,
+                    onItemClick = onItemClick
                 )
             }
         }
@@ -189,9 +242,9 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
         CartBottomSheet(
             cartItems = cart,
             totalAmount = totalAmount,
-            onIncreaseQty = { viewModel.increaseQty(it) },
-            onDecreaseQty = { viewModel.decreaseQty(it) },
-            onRemoveItem = { viewModel.removeFromCart(it) },
+            onIncreaseQty = onIncreaseQty,
+            onDecreaseQty = onDecreaseQty,
+            onRemoveItem = onRemoveItem,
             onCheckout = {
                 isCartVisible = false
                 isPaymentSheetVisible = true
@@ -201,7 +254,20 @@ fun POSScreen(viewModel: POSViewModel = koinViewModel()) {
     }
 
     if (isPaymentSheetVisible) {
-        PaymentBottomSheet(viewModel, onDismiss = { isPaymentSheetVisible = false })
+        PaymentBottomSheet(
+            totalAmount = totalAmount,
+            paymentMethod = paymentMethod,
+            amountPaidInput = amountPaidInput,
+            changeAmount = changeAmount,
+            canConfirmPayment = canConfirmPayment,
+            onSetPaymentMethod = onSetPaymentMethod,
+            onSetAmountPaid = onSetAmountPaid,
+            onConfirmPayment = {
+                onProcessPayment()
+                isPaymentSheetVisible = false
+            },
+            onDismiss = { isPaymentSheetVisible = false }
+        )
     }
 }
 
@@ -257,6 +323,8 @@ fun MenuSection(
                         contentAlignment = Alignment.Center
                     ) { Text("Belum ada menu", color = Color.Gray) }
                 } else {
+                    val firstUnavailableIndex = filteredItems.indexOfFirst { !it.isAvailable || it.stock == 0 }
+                    
                     if (isGridView) {
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 140.dp),
@@ -264,12 +332,42 @@ fun MenuSection(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(filteredItems, key = { it.id }) { item ->
-                                val cartItem = cart.find { it.menuItem.id == item.id }
-                                POSMenuItemCard(
-                                    item,
-                                    cartItem?.quantity ?: 0,
-                                    onClick = { onItemClick(item) })
+                            if (firstUnavailableIndex == -1) {
+                                items(filteredItems, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemCard(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
+                            } else {
+                                val available = filteredItems.subList(0, firstUnavailableIndex)
+                                val unavailable = filteredItems.subList(firstUnavailableIndex, filteredItems.size)
+
+                                items(available, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemCard(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
+                                
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Text(
+                                        "Tidak Tersedia",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+
+                                items(unavailable, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemCard(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
                             }
                         }
                     } else {
@@ -277,12 +375,42 @@ fun MenuSection(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(filteredItems, key = { it.id }) { item ->
-                                val cartItem = cart.find { it.menuItem.id == item.id }
-                                POSMenuItemRow(
-                                    item,
-                                    cartItem?.quantity ?: 0,
-                                    onClick = { onItemClick(item) })
+                            if (firstUnavailableIndex == -1) {
+                                items(filteredItems, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemRow(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
+                            } else {
+                                val available = filteredItems.subList(0, firstUnavailableIndex)
+                                val unavailable = filteredItems.subList(firstUnavailableIndex, filteredItems.size)
+
+                                items(available, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemRow(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
+
+                                item {
+                                    Text(
+                                        "Tidak Tersedia",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+
+                                items(unavailable, key = { it.id }) { item ->
+                                    val cartItem = cart.find { it.menuItem.id == item.id }
+                                    POSMenuItemRow(
+                                        item,
+                                        cartItem?.quantity ?: 0,
+                                        onClick = { onItemClick(item) })
+                                }
                             }
                         }
                     }
@@ -438,13 +566,17 @@ fun POSMenuItemRow(item: MenuItem, quantityInCart: Int, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaymentBottomSheet(viewModel: POSViewModel, onDismiss: () -> Unit) {
-    val total by viewModel.totalAmount.collectAsStateWithLifecycle()
-    val method by viewModel.paymentMethod.collectAsStateWithLifecycle()
-    val paidInput by viewModel.amountPaidInput.collectAsStateWithLifecycle()
-    val change by viewModel.changeAmount.collectAsStateWithLifecycle()
-    val canPay by viewModel.canConfirmPayment.collectAsStateWithLifecycle()
-
+fun PaymentBottomSheet(
+    totalAmount: Long,
+    paymentMethod: String,
+    amountPaidInput: String,
+    changeAmount: Long,
+    canConfirmPayment: Boolean,
+    onSetPaymentMethod: (String) -> Unit,
+    onSetAmountPaid: (String) -> Unit,
+    onConfirmPayment: () -> Unit,
+    onDismiss: () -> Unit
+) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = { BottomSheetDefaults.DragHandle() }) {
@@ -465,7 +597,7 @@ fun PaymentBottomSheet(viewModel: POSViewModel, onDismiss: () -> Unit) {
                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Total Tagihan", fontWeight = FontWeight.Bold)
                     Text(
-                        CurrencyFormatter.formatRupiah(total),
+                        CurrencyFormatter.formatRupiah(totalAmount),
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp
                     )
@@ -474,8 +606,8 @@ fun PaymentBottomSheet(viewModel: POSViewModel, onDismiss: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Cash", "Transfer", "QRIS").forEach { m ->
                     FilterChip(
-                        selected = method == m,
-                        onClick = { viewModel.setPaymentMethod(m) },
+                        selected = paymentMethod == m,
+                        onClick = { onSetPaymentMethod(m) },
                         label = {
                             Text(
                                 m,
@@ -487,21 +619,21 @@ fun PaymentBottomSheet(viewModel: POSViewModel, onDismiss: () -> Unit) {
                     )
                 }
             }
-            if (method == "Cash") {
+            if (paymentMethod == "Cash") {
                 OutlinedTextField(
-                    value = paidInput,
-                    onValueChange = { viewModel.setAmountPaid(it) },
+                    value = amountPaidInput,
+                    onValueChange = onSetAmountPaid,
                     label = { Text("Uang Diterima") },
                     modifier = Modifier.fillMaxWidth(),
                     prefix = { Text("Rp ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
-                if (canPay) {
+                if (canConfirmPayment) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Kembalian")
                         Text(
-                            CurrencyFormatter.formatRupiah(change),
+                            CurrencyFormatter.formatRupiah(changeAmount),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -509,13 +641,53 @@ fun PaymentBottomSheet(viewModel: POSViewModel, onDismiss: () -> Unit) {
                 }
             }
             Button(
-                onClick = { viewModel.processPayment() },
+                onClick = onConfirmPayment,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = canPay,
+                enabled = canConfirmPayment,
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Konfirmasi Pembayaran")
             }
         }
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun POSScreenPreview() {
+    val dummyMenuItems = listOf(
+        MenuItem(1, "Kopi Latte", "Minuman", 25000, 10, true),
+        MenuItem(2, "Espresso", "Minuman", 20000, 5, true),
+        MenuItem(3, "Croissant", "Makanan", 15000, 3, true),
+        MenuItem(4, "Red Velvet", "Makanan", 30000, 0, true)
+    )
+    val dummyCart = listOf(
+        CartItem(dummyMenuItems[0], 1),
+        CartItem(dummyMenuItems[2], 2)
+    )
+
+    LovelyPOSTheme(useScaffold = false) {
+        POSScreenContent(
+            menuState = UiState.Success(dummyMenuItems),
+            filteredItems = dummyMenuItems,
+            cart = dummyCart,
+            categoryList = listOf("Semua", "Makanan", "Minuman"),
+            selectedCategory = "Semua",
+            totalAmount = 55000,
+            itemCount = 3,
+            paymentMethod = "Cash",
+            amountPaidInput = "100000",
+            changeAmount = 45000,
+            canConfirmPayment = true,
+            snackbarHostState = remember { SnackbarHostState() },
+            onCategorySelected = {},
+            onItemClick = {},
+            onIncreaseQty = {},
+            onDecreaseQty = {},
+            onRemoveItem = {},
+            onSetPaymentMethod = {},
+            onSetAmountPaid = {},
+            onProcessPayment = {}
+        )
     }
 }

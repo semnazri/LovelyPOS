@@ -42,8 +42,9 @@ class POSViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("Semua"))
 
-    val filteredItems: StateFlow<List<MenuItem>> = combine(menuItems, _selectedCategory) { items, category ->
-        if (category == "Semua") items else items.filter { it.category == category }
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val filteredItems: StateFlow<List<MenuItem>> = _selectedCategory.flatMapLatest { category ->
+        getMenuItemsUseCase(category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val totalAmount: StateFlow<Long> = _cart.map { items ->

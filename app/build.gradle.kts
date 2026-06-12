@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -17,7 +18,7 @@ android {
         targetSdk = 35
 
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1.3"
 
         testInstrumentationRunner =
             "androidx.test.runner.AndroidJUnitRunner"
@@ -46,6 +47,22 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
+            val appName = try {
+                val stringsFile = file("src/main/res/values/strings.xml")
+                val xmlContent = stringsFile.readText()
+                val pattern = Regex("<string name=\"app_name\">(.*?)</string>")
+                pattern.find(xmlContent)?.groupValues?.get(1) ?: "LovelyPOS"
+            } catch (_: Exception) {
+                "LovelyPOS"
+            }
+            output.outputFileName = "$appName-${versionName}.apk"
+        }
     }
 }
 
@@ -62,6 +79,7 @@ dependencies {
 
     // Core
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
 
     // Compose
     implementation(libs.androidx.activity.compose)
@@ -111,6 +129,11 @@ dependencies {
     // Koin
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+
 
     // Unit Test
     testImplementation(libs.junit)
