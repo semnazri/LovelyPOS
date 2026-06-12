@@ -26,8 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -41,7 +39,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,14 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bahri.lovelypos.R
 import com.bahri.lovelypos.data.entity.MenuItem
 import com.bahri.lovelypos.domain.model.CartItem
 import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
@@ -323,8 +318,9 @@ fun MenuSection(
                         contentAlignment = Alignment.Center
                     ) { Text("Belum ada menu", color = Color.Gray) }
                 } else {
-                    val firstUnavailableIndex = filteredItems.indexOfFirst { !it.isAvailable || it.stock == 0 }
-                    
+                    val firstUnavailableIndex =
+                        filteredItems.indexOfFirst { !it.isAvailable || it.stock == 0 }
+
                     if (isGridView) {
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 140.dp),
@@ -342,7 +338,8 @@ fun MenuSection(
                                 }
                             } else {
                                 val available = filteredItems.subList(0, firstUnavailableIndex)
-                                val unavailable = filteredItems.subList(firstUnavailableIndex, filteredItems.size)
+                                val unavailable =
+                                    filteredItems.subList(firstUnavailableIndex, filteredItems.size)
 
                                 items(available, key = { it.id }) { item ->
                                     val cartItem = cart.find { it.menuItem.id == item.id }
@@ -351,7 +348,7 @@ fun MenuSection(
                                         cartItem?.quantity ?: 0,
                                         onClick = { onItemClick(item) })
                                 }
-                                
+
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     Text(
                                         "Tidak Tersedia",
@@ -385,7 +382,8 @@ fun MenuSection(
                                 }
                             } else {
                                 val available = filteredItems.subList(0, firstUnavailableIndex)
-                                val unavailable = filteredItems.subList(firstUnavailableIndex, filteredItems.size)
+                                val unavailable =
+                                    filteredItems.subList(firstUnavailableIndex, filteredItems.size)
 
                                 items(available, key = { it.id }) { item ->
                                     val cartItem = cart.find { it.menuItem.id == item.id }
