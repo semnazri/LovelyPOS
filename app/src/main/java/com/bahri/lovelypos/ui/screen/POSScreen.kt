@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
@@ -49,8 +50,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -173,33 +174,6 @@ fun POSScreenContent(
 
     LovelyPOSTheme(useScaffold = false) {
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {},
-                    actions = {
-                        IconButton(onClick = { isCartVisible = true }) {
-                            BadgedBox(
-                                badge = {
-                                    if (itemCount > 0) {
-                                        Badge(
-                                            containerColor = Color(0xFF008080),
-                                            contentColor = Color.White,
-                                            modifier = Modifier.graphicsLayer {
-                                                scaleX = badgeScale.value
-                                                scaleY = badgeScale.value
-                                            }
-                                        ) {
-                                            Text(itemCount.toString())
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
-                            }
-                        }
-                    }
-                )
-            },
             floatingActionButton = {
                 if (cart.isNotEmpty()) {
                     ExtendedFloatingActionButton(
@@ -215,7 +189,8 @@ fun POSScreenContent(
                     }
                 }
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            contentWindowInsets = WindowInsets(0, 12, 0, 0)
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
                 MenuSection(
@@ -224,10 +199,13 @@ fun POSScreenContent(
                     categories = categoryList,
                     selectedCategory = selectedCategory,
                     cart = cart,
+                    itemCount = itemCount,
+                    badgeScale = badgeScale.value,
                     isGridView = isGridView,
                     onToggleView = { isGridView = !isGridView },
                     onCategorySelected = onCategorySelected,
-                    onItemClick = onItemClick
+                    onItemClick = onItemClick,
+                    onCartClick = { isCartVisible = true }
                 )
             }
         }
@@ -241,7 +219,6 @@ fun POSScreenContent(
             onDecreaseQty = onDecreaseQty,
             onRemoveItem = onRemoveItem,
             onCheckout = {
-                isCartVisible = false
                 isPaymentSheetVisible = true
             },
             onDismiss = { isCartVisible = false }
@@ -273,18 +250,23 @@ fun MenuSection(
     categories: List<String>,
     selectedCategory: String,
     cart: List<CartItem>,
+    itemCount: Int,
+    badgeScale: Float,
     isGridView: Boolean,
     onToggleView: () -> Unit,
     onCategorySelected: (String) -> Unit,
-    onItemClick: (MenuItem) -> Unit
+    onItemClick: (MenuItem) -> Unit,
+    onCartClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
@@ -299,9 +281,29 @@ fun MenuSection(
             }
             IconButton(onClick = onToggleView) {
                 Icon(
-                    if (isGridView) Icons.Default.List else Icons.Default.Menu,
+                    if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.Menu,
                     contentDescription = "Toggle View"
                 )
+            }
+            IconButton(onClick = onCartClick) {
+                BadgedBox(
+                    badge = {
+                        if (itemCount > 0) {
+                            Badge(
+                                containerColor = Color(0xFF008080),
+                                contentColor = Color.White,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = badgeScale
+                                    scaleY = badgeScale
+                                }
+                            ) {
+                                Text(itemCount.toString())
+                            }
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                }
             }
         }
 
@@ -650,7 +652,7 @@ fun PaymentBottomSheet(
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable
 fun POSScreenPreview() {
     val dummyMenuItems = listOf(
@@ -665,27 +667,29 @@ fun POSScreenPreview() {
     )
 
     LovelyPOSTheme(useScaffold = false) {
-        POSScreenContent(
-            menuState = UiState.Success(dummyMenuItems),
-            filteredItems = dummyMenuItems,
-            cart = dummyCart,
-            categoryList = listOf("Semua", "Makanan", "Minuman"),
-            selectedCategory = "Semua",
-            totalAmount = 55000,
-            itemCount = 3,
-            paymentMethod = "Cash",
-            amountPaidInput = "100000",
-            changeAmount = 45000,
-            canConfirmPayment = true,
-            snackbarHostState = remember { SnackbarHostState() },
-            onCategorySelected = {},
-            onItemClick = {},
-            onIncreaseQty = {},
-            onDecreaseQty = {},
-            onRemoveItem = {},
-            onSetPaymentMethod = {},
-            onSetAmountPaid = {},
-            onProcessPayment = {}
-        )
+        Surface(color = MaterialTheme.colorScheme.background) {
+            POSScreenContent(
+                menuState = UiState.Success(dummyMenuItems),
+                filteredItems = dummyMenuItems,
+                cart = dummyCart,
+                categoryList = listOf("Semua", "Makanan", "Minuman"),
+                selectedCategory = "Semua",
+                totalAmount = 55000,
+                itemCount = 3,
+                paymentMethod = "Cash",
+                amountPaidInput = "100000",
+                changeAmount = 45000,
+                canConfirmPayment = true,
+                snackbarHostState = remember { SnackbarHostState() },
+                onCategorySelected = {},
+                onItemClick = {},
+                onIncreaseQty = {},
+                onDecreaseQty = {},
+                onRemoveItem = {},
+                onSetPaymentMethod = {},
+                onSetAmountPaid = {},
+                onProcessPayment = {}
+            )
+        }
     }
 }

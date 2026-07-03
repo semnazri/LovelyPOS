@@ -1,4 +1,3 @@
-// MODIFIED — Milestone 6
 package com.bahri.lovelypos
 
 import android.os.Bundle
@@ -36,7 +35,8 @@ import com.bahri.lovelypos.ui.theme.LovelyPOSTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { false }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

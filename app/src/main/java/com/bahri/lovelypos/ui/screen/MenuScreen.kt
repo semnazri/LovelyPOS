@@ -50,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,7 +78,6 @@ import com.bahri.lovelypos.util.CurrencyFormatter
 import com.bahri.lovelypos.util.UiState
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel = koinViewModel()
@@ -86,6 +87,28 @@ fun MenuScreen(
     val categoryList by viewModel.categoryList.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
+    MenuScreenContent(
+        menuState = menuState,
+        filteredItems = filteredItems,
+        categoryList = categoryList,
+        selectedCategory = selectedCategory,
+        onCategorySelected = { viewModel.setCategory(it) },
+        onSaveItem = { viewModel.saveItem(it) },
+        onDeleteItem = { viewModel.deleteItem(it) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MenuScreenContent(
+    menuState: UiState<List<MenuItem>>,
+    filteredItems: List<MenuItem>,
+    categoryList: List<String>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    onSaveItem: (MenuItem) -> Unit,
+    onDeleteItem: (MenuItem) -> Unit
+) {
     var showBottomSheet by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<MenuItem?>(null) }
     var showDeleteDialog by remember { mutableStateOf<MenuItem?>(null) }
@@ -106,7 +129,7 @@ fun MenuScreen(
             CategoryFilter(
                 categories = categoryList,
                 selectedCategory = selectedCategory,
-                onCategorySelected = { viewModel.setCategory(it) }
+                onCategorySelected = onCategorySelected
             )
 
             AnimatedContent(
@@ -143,11 +166,7 @@ fun MenuScreen(
                                         onEdit = { itemToEdit = item; showBottomSheet = true },
                                         onDelete = { showDeleteDialog = item },
                                         onToggleAvailable = {
-                                            viewModel.saveItem(
-                                                item.copy(
-                                                    isAvailable = it
-                                                )
-                                            )
+                                            onSaveItem(item.copy(isAvailable = it))
                                         }
                                     )
                                 }
@@ -173,7 +192,7 @@ fun MenuScreen(
             item = itemToEdit,
             existingCategories = categoryList.filter { it != "Semua" },
             onDismiss = { showBottomSheet = false },
-            onSave = { viewModel.saveItem(it); showBottomSheet = false }
+            onSave = { onSaveItem(it); showBottomSheet = false }
         )
     }
 
@@ -184,7 +203,7 @@ fun MenuScreen(
             text = { Text("Menu ini akan dihapus permanen. Data riwayat transaksi tidak terpengaruh.") },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.deleteItem(showDeleteDialog!!); showDeleteDialog = null },
+                    onClick = { onDeleteItem(showDeleteDialog!!); showDeleteDialog = null },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) { Text("Hapus") }
             },
@@ -425,6 +444,30 @@ fun EmptyMenuState(onAddClick: () -> Unit) {
                 Icons.Default.Add,
                 null
             ); Spacer(Modifier.width(8.dp)); Text("Tambah Menu")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MenuScreenPreview() {
+    val dummyItems = listOf(
+        MenuItem(1, "Kopi Latte", "Minuman", 25000, 10, true),
+        MenuItem(2, "Espresso", "Minuman", 20000, 5, true),
+        MenuItem(3, "Croissant", "Makanan", 15000, 3, true),
+        MenuItem(4, "Red Velvet", "Makanan", 30000, 0, false)
+    )
+    LovelyPOSTheme(useScaffold = false) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            MenuScreenContent(
+                menuState = UiState.Success(dummyItems),
+                filteredItems = dummyItems,
+                categoryList = listOf("Semua", "Makanan", "Minuman"),
+                selectedCategory = "Semua",
+                onCategorySelected = {},
+                onSaveItem = {},
+                onDeleteItem = {}
+            )
         }
     }
 }
