@@ -1,4 +1,4 @@
-package com.bahri.lovelypos.ui.screen
+package com.bahri.lovelypos.ui.screen.pos.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,12 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bahri.lovelypos.R
 import com.bahri.lovelypos.domain.model.CartItem
 import com.bahri.lovelypos.util.CurrencyFormatter
 
@@ -55,101 +54,94 @@ fun CartBottomSheet(
     onCheckout: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val totalQty = cartItems.sumOf { it.quantity }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        sheetState = sheetState
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                "Keranjang ($totalQty item)",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.padding(horizontal = 4.dp))
+                    Text(
+                        "Keranjang",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    "${cartItems.size} Item",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+            }
+
+            HorizontalDivider()
 
             if (cartItems.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .padding(vertical = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.ShoppingCart,
-                        null,
-                        Modifier.size(64.dp),
-                        tint = Color.Gray.copy(0.4f)
-                    )
-                    Text("Keranjang Kosong", color = Color.Gray)
+                    Text("Keranjang kosong", color = Color.Gray)
+                    Spacer(Modifier.height(16.dp))
+                    TextButton(onClick = onDismiss) { Text("Tambah Menu") }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f, fill = false),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .widthIn(max = 600.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(cartItems, key = { it.menuItem.id }) { item ->
                         CartItemRow(
                             item = item,
-                            onInc = { onIncreaseQty(item.menuItem.id) },
-                            onDec = { onDecreaseQty(item.menuItem.id) },
+                            onIncrease = { onIncreaseQty(item.menuItem.id) },
+                            onDecrease = { onDecreaseQty(item.menuItem.id) },
                             onRemove = { onRemoveItem(item.menuItem.id) }
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            thickness = 0.5.dp,
-                            color = Color.LightGray.copy(alpha = 0.5f)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Total",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Total Pembayaran", fontWeight = FontWeight.Medium)
                     Text(
                         CurrencyFormatter.formatRupiah(totalAmount),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF008080)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = onCheckout,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008080)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Proses Bayar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Lanjut Belanja", color = Color.Gray)
+                    Text("Checkout Sekarang", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -159,96 +151,70 @@ fun CartBottomSheet(
 @Composable
 fun CartItemRow(
     item: CartItem,
-    onInc: () -> Unit,
-    onDec: () -> Unit,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit,
     onRemove: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                item.menuItem.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                maxLines = 2
-            )
+            Text(item.menuItem.name, fontWeight = FontWeight.Bold)
             Text(
                 CurrencyFormatter.formatRupiah(item.menuItem.price),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(
-                onClick = onDec,
+                onClick = if (item.quantity > 1) onDecrease else onRemove,
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .size(24.dp)
+                    .size(32.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        CircleShape
+                    )
             ) {
+                val iconPainter = if (item.quantity > 1) {
+                    painterResource(android.R.drawable.ic_menu_close_clear_cancel)
+                } else {
+                    rememberVectorPainter(Icons.Default.Delete)
+                }
                 Icon(
-                    painterResource(R.drawable.outline_remove_24),
-                    null,
-                    Modifier.size(14.dp),
-                    tint = Color.Black
+                    painter = iconPainter,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (item.quantity > 1) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                 )
             }
 
             Text(
                 item.quantity.toString(),
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                modifier = Modifier.widthIn(min = 20.dp),
+                modifier = Modifier.widthIn(min = 24.dp),
                 textAlign = TextAlign.Center
             )
 
             IconButton(
-                onClick = onInc,
-                enabled = item.quantity < item.menuItem.stock,
+                onClick = onIncrease,
                 modifier = Modifier
-                    .background(
-                        if (item.quantity < item.menuItem.stock) Color(0xFF008080) else Color.Gray,
-                        CircleShape
-                    )
-                    .size(24.dp)
+                    .size(32.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
             ) {
                 Icon(
                     Icons.Default.Add,
-                    null,
-                    Modifier.size(16.dp),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
                     tint = Color.White
                 )
             }
-        }
-        }
-
-        Text(
-            CurrencyFormatter.formatRupiahWithoutDecimal(item.subtotal),
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(start = 4.dp)
-        )
-
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier
-                .padding(start = 4.dp)
-                .size(32.dp)
-        ) {
-            Icon(
-                Icons.Default.Delete,
-                null,
-                tint = Color.Red.copy(alpha = 0.6f),
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

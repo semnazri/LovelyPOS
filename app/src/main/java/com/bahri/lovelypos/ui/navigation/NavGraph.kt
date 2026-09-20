@@ -4,11 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.bahri.lovelypos.ui.screen.HistoryScreen
-import com.bahri.lovelypos.ui.screen.MenuScreen
-import com.bahri.lovelypos.ui.screen.POSScreen
-import com.bahri.lovelypos.ui.screen.SplashScreen
-import com.bahri.lovelypos.ui.screen.SummaryScreen
+import com.bahri.lovelypos.ui.screen.history.HistoryScreen
+import com.bahri.lovelypos.ui.screen.menu.MenuScreen
+import com.bahri.lovelypos.ui.screen.pos.POSScreen
+import com.bahri.lovelypos.ui.screen.splash.SplashScreen
+import com.bahri.lovelypos.ui.screen.summary.SummaryScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {

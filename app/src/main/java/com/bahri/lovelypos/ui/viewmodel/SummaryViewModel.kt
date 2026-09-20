@@ -24,7 +24,7 @@ class SummaryViewModel(
     private val getSalesSummaryUseCase: GetSalesSummaryUseCase
 ) : ViewModel() {
 
-    private val _dateRangeMode = MutableStateFlow("Hari ini")
+    private val _dateRangeMode = MutableStateFlow("Hari Ini")
     val dateRangeMode: StateFlow<String> = _dateRangeMode.asStateFlow()
 
     private val _customStartDate = MutableStateFlow<Long?>(null)
@@ -40,9 +40,10 @@ class SummaryViewModel(
         Triple(mode, customStart, customEnd)
     }.flatMapLatest { (mode, start, end) ->
         val range = when (mode) {
-            "Hari ini" -> getTodayRange()
-            "Minggu ini" -> getThisWeekRange()
-            "Bulan ini" -> getThisMonthRange()
+            "Hari Ini" -> getTodayRange()
+            "7 Hari Terakhir" -> getPastDaysRange(7)
+            "30 Hari Terakhir" -> getPastDaysRange(30)
+            "Bulan Ini" -> getThisMonthRange()
             "Custom" -> {
                 if (start != null && end != null) {
                     val cal = Calendar.getInstance()
@@ -95,20 +96,19 @@ class SummaryViewModel(
         return Pair(start, end)
     }
 
-    private fun getThisWeekRange(): Pair<Long, Long> {
+    private fun getPastDaysRange(days: Int): Pair<Long, Long> {
         val cal = Calendar.getInstance()
-        cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
-        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(
-            Calendar.SECOND,
-            0
-        ); cal.set(Calendar.MILLISECOND, 0)
-        val start = cal.timeInMillis
-        cal.add(Calendar.DAY_OF_WEEK, 6)
         cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(
             Calendar.SECOND,
             59
         ); cal.set(Calendar.MILLISECOND, 999)
         val end = cal.timeInMillis
+        cal.add(Calendar.DAY_OF_YEAR, -(days - 1))
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(
+            Calendar.SECOND,
+            0
+        ); cal.set(Calendar.MILLISECOND, 0)
+        val start = cal.timeInMillis
         return Pair(start, end)
     }
 

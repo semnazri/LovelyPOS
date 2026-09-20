@@ -1,4 +1,4 @@
-package com.bahri.lovelypos.ui.screen
+package com.bahri.lovelypos.ui.screen.splash
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -68,4 +68,3 @@ fun SplashScreenPreview() {
         SplashScreen(onNavigateToPOS = {})
     }
 }
-

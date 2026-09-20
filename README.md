@@ -86,7 +86,7 @@ UI (Compose) ↔ ViewModel (State) → UseCase (Domain) → Repository (Data) �
 *Note: No backend setup is required. The app is fully functional offline from the first launch.*
 
 ## Roadmap
-- [ ] **Atomic Design**: Refactoring the UI components for better reusability.
+- [x] **Reusable Component Design**: Refactoring the UI components for better reusability.
 - [ ] **PDF Export**: Generate monthly sales reports in PDF format.
 - [ ] **Bluetooth Printing**: Support for 58mm thermal receipt printers.
 - [ ] **Sync Engine**: Optional cloud backup using Spring Boot/Kotlin backend.
