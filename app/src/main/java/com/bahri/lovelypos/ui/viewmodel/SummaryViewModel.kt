@@ -67,7 +67,7 @@ class SummaryViewModel(
                 .onStart { emit(UiState.Loading) }
                 .catch { emit(UiState.Error(it.message ?: "Unknown error")) }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     fun setDateRangeMode(mode: String) {
         _dateRangeMode.value = mode

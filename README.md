@@ -87,7 +87,7 @@ UI (Compose) ↔ ViewModel (State) → UseCase (Domain) → Repository (Data) �
 
 ## Roadmap
 - [x] **Reusable Component Design**: Refactoring the UI components for better reusability.
-- [ ] **PDF Export**: Generate monthly sales reports in PDF format.
+- [x] **PDF Export**: Generate monthly sales reports in PDF format.
 - [ ] **Bluetooth Printing**: Support for 58mm thermal receipt printers.
 - [ ] **Sync Engine**: Optional cloud backup using Spring Boot/Kotlin backend.
 - [ ] **Web Dashboard**: A browser-based view for remote business monitoring.
